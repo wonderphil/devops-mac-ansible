@@ -1,0 +1,51 @@
+---
+- name: Install configured cask applications for dotnet devs
+  homebrew_cask:
+    name: "{{ item.name | default(item) }}"
+    state: present
+    install_options: "{{ item.install_options | default(omit) }}"
+    accept_external_apps: "{{ homebrew_cask_accept_external_apps }}"
+    sudo_password: "{{ ansible_become_password | default(omit) }}"
+  loop: "{{ dotnet_dev_cask_apps }}"
+  tags: dotnet
+
+- name: Ensure configured homebrew packages are installed.
+  homebrew:
+    name: "{{ item.name | default(item) }}"
+    install_options: "{{ item.install_options | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ dotnet_dev_brew_apps }}"
+  tags: dotnet
+
+# because there is no silent or command line installer, will just download
+- name: Check if visual studio for mac exsits
+  local_action: stat path="/Applications/Visual Studio.app"
+  register: app_exists
+  tags: dotnet
+
+- name: Check if visual studio for mac installer exsits
+  local_action: stat path=~/Desktop/visualstudioformacinstaller.dmg
+  register: app_installer_exists
+  tags: dotnet
+
+- name: remove dmg
+  command: rm -R ~/Desktop/visualstudioformacinstaller.dmg
+  when: app_installer_exists.stat.exists == true
+  tags: dotnet
+
+- name: Download DMG
+  get_url: url=https://aka.ms/vs/mac/download dest=~/Desktop/visualstudioformacinstaller.dmg
+  when: app_exists.stat.exists == false
+  tags: dotnet
+
+- include_tasks: tasks/dock/remove.yml
+  vars:
+    - dockitems_remove: "{{ default_dockitems_remove }}"
+  when: dotnet_dev_configure_dock == true
+  tags: ['dotnet', 'dock']
+
+- include_tasks: tasks/dock.yml
+  vars:
+    - dockitems_persist: "{{ dotnet_dev_dockitems_persist }}"
+  when: dotnet_dev_configure_dock == true
+  tags: ['dotnet', 'dock']

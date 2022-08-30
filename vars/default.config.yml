@@ -1,0 +1,309 @@
+---
+downloads: ~/.ansible-downloads/
+terraform_version: 1.2.4
+terragrunt_version: 0.38.0
+vs_settings_gist_id: 
+configure_shell: zsh
+
+oh_my_zsh_theme: robbyrussell
+oh_my_zsh_plugins:
+  - 1password
+  - ansible
+  - aws
+  - autoupdate
+  - brew
+  - bundler
+  - docker-compose
+  - docker
+  - dotnet
+  - git
+  - git-prompt
+  - gitignore
+  - iterm2
+  - rails
+  - ruby
+  - terraform
+  - terragrunt
+  - yarn
+  
+oh_my_zsh_custom_plugins:
+  - name: k
+    url: https://github.com/supercrabtree/k
+  - name: autoupdate
+    url: https://github.com/TamCore/autoupdate-oh-my-zsh-plugins
+  - name: zsh-aws-vault
+    url: https://github.com/blimmer/zsh-aws-vault.git
+  - name: zsh-syntax-highlighting
+    url: https://github.com/zsh-users/zsh-syntax-highlighting.git
+  - name: zsh-autosuggestions
+    url: https://github.com/zsh-users/zsh-autosuggestions
+  - name: terragrunt
+    url: https://github.com/hanjunlee/terragrunt-oh-my-zsh-plugin  
+  
+
+# Set to 'true' to configure the Dock via dockutil.
+default_configure_dock: true
+default_dockitems_remove:
+  - Calendar
+  - Contacts
+  - Downloads
+  - FaceTime
+  - Launchpad
+  - Mail
+  - Maps
+  - Messages
+  - Music
+  - News
+  - Notes
+  - Photos
+  - Podcasts
+  - Reminders
+  - Safari
+  - 'App Store'
+  - 'System Preferences'
+  - TV
+
+default_dockitems_persist:
+  - name: "Calendar"
+    path: "/System/Applications/Calendar.app/"
+  - name: "System Preferences"
+    path: "/System/Applications/System Preferences.app/"
+  - name: "Safari"
+    path: "/Applications/Safari.app/"
+  - name: "Google Chrome"
+    path: "/Applications/Google Chrome.app/"
+  - name: "Firefox"
+    path: "/Applications/Firefox.app/"
+  - name: "Tor Browser"
+    path: "/Applications/Tor Browser.app/"
+  - name: "Beyond Compare"
+    path: "/Applications/Beyond Compare.app/"
+  - name: "Microsoft Remote Desktop"
+    path: "/Applications/Microsoft Remote Desktop.app/"
+  - name: "OpenVPN Connect"
+    path: "/Applications/OpenVPN Connect.app/"
+  - name: "AWS VPN Client"
+    path: "/Applications/AWS VPN Client/AWS VPN Client.app/"
+  - name: "Paw"
+    path: "/Applications/Paw.app/"
+  - name: "PowerShell"
+    path: "/Applications/PowerShell.app/"
+  - name: "Slack"
+    path: "/Applications/Slack.app/"
+  - name: "WhatsApp"
+    path: "/Applications/WhatsApp.app/"
+  - name: "zoom.us"
+    path: "/Applications/zoom.us.app/"
+  - name: "iTerm"
+    path: "/Applications/iTerm.app/"
+  - name: "draw.io"
+    path: "/Applications/draw.io.app/"
+  - name: "Visual Studio Code"
+    path: "/Applications/Visual Studio Code.app/"
+
+homebrew_taps:
+  - aws/tap
+  - homebrew/cask
+  - homebrew/cask-drivers
+  - homebrew/core
+
+homebrew_cask_uninstalled_apps: []
+homebrew_cask_accept_external_apps: false
+homebrew_cask_apps: 
+  - 1password
+  - 1password/tap/1password-cli
+  - alfred
+  - angry-ip-scanner
+  - aws-vault
+  - aws-vpn-client
+  - beyond-compare
+  - charles
+  - chromedriver
+  - cyberduck
+  - dash
+  - dbeaver-community
+  - docker
+  - drawio
+  - firefox
+  - github
+  - gitkraken
+  - google-chrome
+  - google-drive
+  - gpg-suite-no-mail
+  - gpg-sync
+  - hpedrorodrigues/tools/dockutil
+  - ipvanish-vpn
+  - iterm2
+  - keepassxc
+  - keybase
+  - lens
+  # - logitech-options
+  - microsoft-remote-desktop
+  - obs
+  - openinterminal
+  - openvpn-connect
+  - paw
+  - pgadmin4
+  - powershell
+  - slack
+  - sourcetree
+  - tor-browser
+  - tuxera-ntfs
+  - visual-studio-code
+  - vlc
+  - whatsapp
+  - zoom
+
+
+homebrew_uninstalled_packages: 
+  - dockutil
+homebrew_installed_packages: 
+  - aws-sam-cli
+  - aws-shell
+  - awscli
+  - azure-cli
+  - bash
+  - bash-completion
+  - cli53
+  - coreutils
+  # - dockutil # needs to be updated, for temp fix using hpedrorodrigues/tools/dockutil in casks
+  - gawk
+  - git
+  - git-gui
+  - git-secret
+  - gnupg
+  - gnutls
+  - go
+  - graphite2
+  - graphviz
+  - graphviz
+  - htop
+  - java
+  - jpeg
+  - jpeg-xl
+  - jq
+  - k9s
+  - kubectx
+  - kubernetes-cli
+  - libpq
+  - mysql
+  - node
+  - openjpeg
+  - packer
+  - parallel
+  - pinentry
+  - pinentry-mac
+  - postgresql
+  - rbenv
+  - readline
+  - ruby-build
+  - sqlite
+  - telnet
+  - terraform
+  - terragrunt
+  - tflint
+  - warrensbox/tap/tfswitch
+  - warrensbox/tap/tgswitch
+  - wget
+  - yq
+
+homebrew_upgrade_all_packages: false
+
+mas_installed_apps: []
+  # - { id: 425264550, name: "Blackmagic Disk Speed Test (3.0)" }
+  # - { id: 441258766, name: "Magnet" }
+  # - { id: 423368786, name: "System Monitor"}
+  # - { id: 1295203466, name: "Microsoft Remote Desktop" }
+
+ruby_dev_install: true
+ruby_version: 2.7.2
+ruby_dev_cask_apps:
+  - rubymine
+ruby_dev_brew_apps:
+  - rbenv
+  - ruby-build
+gem_packages:
+  - name: bundler
+    state: present
+    version: "~> 2.1.4" # default: N/A
+  - name: rails
+    state: present
+    version: "~> 7.0.2.4"
+ruby_dev_configure_dock: true
+ruby_dev_dockitems_remove: []
+ruby_dev_dockitems_persist:
+  - name: "RubyMine"
+    path: "/Applications/RubyMine.app/"
+
+python_dev_install: true
+python_dev_cask_apps: []
+python_dev_brew_apps: []
+pip_packages: 
+  - name: pytest
+    state: present
+  - name: virtualenv
+    state: present
+  - name: virtualenvwrapper
+    state: present
+  - name: awscli
+    state: present
+  - name: boto3
+    state: present
+  - name: v20
+    state: present
+# - name: mkdocs
+#   state: present # present/absent/latest, default: present
+#   version: "0.16.3" # default: N/A
+install_mi: true
+pycharm_plugin_download_mirror: "https://plugins.jetbrains.com/plugin/download?updateId="
+pycharm_plugins: []
+pycharm_download_directory: /tmp
+python_dev_configure_dock: true
+python_dev_dockitems_remove: [11349] #11349: AWS ToolKit
+python_dev_dockitems_persist:
+  - name: "PyCharm"
+    path: "/Applications/PyCharm.app/"
+
+dotnet_dev_install: true
+# I did try to install MS Vs using brew but it fails and then never installs anything
+dotnet_dev_cask_apps:
+  - dotnet-sdk
+dotnet_dev_brew_apps: []
+dotnet_dev_configure_dock: false
+dotnet_dev_dockitems_remove: []
+dotnet_dev_dockitems_persist: []
+
+react_dev_install: true
+nodejs_version: 16.16.0
+npm_packages:
+  - name: yarn
+    state: present
+# - name: webpack
+#   state: present # present/absent/latest, default: present
+#   version: "^2.6" # default: N/A
+react_dev_configure_dock: false
+react_dev_dockitems_remove: []
+react_dev_dockitems_persist: []
+
+config_git: true
+git_custom_config: true
+git_custom_config_block: |
+  # Customize this to your requirements or set git_custom_config to false to not use
+  # Gitdir should match the var of repo_folders 
+
+  [includeIf "gitdir:~/repos/personal/"]
+    path = ~/.gitconfig-personal
+  [includeIf "gitdir:~/git/"]
+    path = ~/.gitconfig-work
+
+git_excludesfile: ''
+repo_folders:
+  - "~/repos/personal"
+  - "~/git"
+
+git_custom_config_files:
+  - "gitconfig-personal"
+  - "gitconfig-work"
+
+gpg_config: true
+config_iterm: true

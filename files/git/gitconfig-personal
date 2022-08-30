@@ -1,0 +1,20 @@
+# This is Git's per-user configuration file.
+[user]
+	name = 
+	email = 
+	signingKey = 
+[core]
+	excludesfile = ~/.gitignore_global
+[commit]
+	gpgSign = true
+[gpg]
+    program = /opt/homebrew/bin/gpg
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[gpg]
+	program = gpg
+[tag]
+	forceSignAnnotated = false

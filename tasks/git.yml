@@ -1,0 +1,26 @@
+---
+# Configure Git Profiles
+
+- name: Copy main Git config file
+  template:
+    src: templates/gitconfig_main.j2
+    dest: ~/.gitconfig
+    mode: '0644'
+  tags: git
+
+- name: create repo folders
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ repo_folders }}"
+  tags: git
+
+- name: copy git configs
+  ansible.builtin.copy:
+    src: files/git/{{ item }}
+    dest: "~/.{{ item }}"
+    mode: '0644'
+  when: git_custom_config == true
+  loop: "{{ git_custom_config_files }}"
+  tags: git

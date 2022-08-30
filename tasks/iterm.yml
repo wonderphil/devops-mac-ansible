@@ -1,0 +1,15 @@
+---
+- name: copy iterm perferences
+  ansible.builtin.copy:
+    src: files/iterm/com.googlecode.iterm2.plist
+    dest: ~/Library/Preferences/com.googlecode.iterm2.plist
+    mode: '0600'
+  tags: iterm
+
+- name: copy profiles perferences
+  ansible.builtin.copy:
+    src: files/iterm/iterm_profile_default.json
+    dest: '~/Library/Application Support/iTerm2/DynamicProfiles/default.json'
+    mode: '0600'
+  tags: iterm
+

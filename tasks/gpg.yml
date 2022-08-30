@@ -1,0 +1,39 @@
+---
+- name: Check if gpg command installed
+  stat:
+    path: /opt/homebrew/bin/gpg
+  register: gpg_result
+
+- name: import GPG private Keys
+  block:
+    - name: write to tmp file
+      ansible.builtin.copy:
+        content: "{{ item.base64_key | b64decode }}"
+        dest: "/tmp/{{ item.email }}"
+        mode: '0600'
+      loop: "{{ gpg_private_keys }}"
+    
+    - name: import gpg private keys
+      shell: gpg --import /tmp/{{ item.email }}
+      loop: "{{ gpg_private_keys }}"
+
+    - name: clean up files
+      shell: rm -f "/tmp/{{ item.email }}"
+      loop: "{{ gpg_private_keys }}"
+
+  rescue:
+    # Incase the import fails dont want to leave private key in tmp
+    # do not like this way, but on my key I kept getting errors 
+    # because the key was so long
+    - name: clean up files
+      shell: rm -f "/tmp/{{ item.email }}"
+      loop: "{{ gpg_private_keys }}"
+
+  when: gpg_result.stat.exists == true
+
+- name: Copy gpg agent file
+  ansible.builtin.copy:
+    src: files/gpg/gpg-agent.conf
+    dest: "~/.gnupg/gpg-agent.conf"
+    mode: '0600'
+  notify: Restart Gpg agent

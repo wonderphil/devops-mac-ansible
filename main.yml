@@ -1,0 +1,69 @@
+---
+- hosts: all
+  become: false
+  connection: local
+  vars_files:
+    - vars/default.config.yml
+    - vars/mysecrets.yml
+
+  handlers:
+    - include: handlers/main.yml
+
+  pre_tasks:
+    - include_tasks: tasks/dock/remove.yml
+      vars:
+        - dockitems_remove: "{{ default_dockitems_remove }}"
+    
+    - include_tasks: tasks/shell.yml
+      when: configure_shell == 'zsh'
+      tags: shell
+
+    - include_tasks: tasks/secure_files.yml
+    - include_tasks: tasks/gpg.yml
+      when: gpg_config == true
+
+  tasks:
+    - include_tasks: tasks/brew.yml
+      tags: brew
+    
+    - include_tasks: tasks/visual_code.yml
+    
+    # Commented out because the download doesnt work most of the times
+    # - include_tasks: tasks/install_dmg.yml 
+    #   vars:
+    #     - appName: SystemMonitorPlus 
+    #     - dmgURL: https://www.bresink.eu/download3.php?PHPSESSID=d9df227df70b47ec5f6c7c261db8f6db
+
+    - include_tasks: tasks/dock.yml
+      vars:
+        - configure_dock: "{{ default_configure_dock }}"
+        - dockitems_persist: "{{ default_dockitems_persist }}"
+      tags: dock
+    
+    - include_tasks: tasks/ruby_dev_install.yml
+      when: ruby_dev_install == true
+      tags: ruby
+
+    - include_tasks: tasks/python_dev_install.yml
+      when: python_dev_install == true
+      tags: python
+    
+    - include_tasks: tasks/dotnet_dev_install.yml
+      when: dotnet_dev_install == true
+      tags: dotnet
+
+    - include_tasks: tasks/react_dev_install.yml
+      when: react_dev_install == true
+      tags: react
+
+    - include_tasks: tasks/git.yml
+      when: config_git == true
+      tags: git
+    
+    - include_tasks: tasks/iterm.yml
+      when: config_iterm == true
+      tags: iterm
+
+  roles:
+    - role: geerlingguy.mac.mas
+  

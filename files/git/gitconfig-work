@@ -1,0 +1,39 @@
+[user]
+	name = 
+	email = 
+	signingKey = 
+[hub]
+	protocol = https
+[core]
+	excludesfile = ~/.gitignore_global
+	editor = code
+[web]
+	browser = google-chrome
+[filter "lfs"]
+	process = git-lfs filter-process
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+[credential "microsoft.visualstudio.com"]
+	authority = AAD
+[credential "visualstudio.com"]
+	authority = MSA
+[alias]
+	co = checkout
+	br = branch
+	ci = commit
+	st = status
+	unstage = reset HEAD --
+	last = log -1 HEAD
+	logall = "log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all"
+	parent = "!git show-branch | grep '*' | grep -v \"$(git rev-parse --abbrev-ref HEAD)\" | head -n1 | sed 's/.*\\[\\(.*\\)\\].*/\\1/' | sed 's/[\\^~].*//' #"
+[fetch]
+	prune = true
+[http]
+	sslVerify = false
+[gpg]
+	program = gpg
+[tag]
+	forceSignAnnotated = false
+[pull]
+	rebase = true

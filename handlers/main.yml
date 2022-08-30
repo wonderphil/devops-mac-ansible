@@ -1,0 +1,6 @@
+---
+- name: 'Restart Dock'
+  shell: killall -KILL Dock
+
+- name: 'Restart Gpg agent'
+  shell: killall gpg-agent

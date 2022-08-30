@@ -1,0 +1,59 @@
+---
+- name: clone oh-my-zsh for users
+  # core.autocrlf=input prevents https://github.com/robbyrussell/oh-my-zsh/issues/4402
+  command: 'git clone -c core.autocrlf=input --depth=1 https://github.com/robbyrussell/oh-my-zsh.git .oh-my-zsh'
+  args:
+    chdir: '~/'
+    creates: '~/.oh-my-zsh'
+  tags: shell
+
+- name: set default shell for user
+  user:
+    name: '{{ ansible_env.USER }}'
+    shell: /bin/zsh
+  become: yes
+  tags: shell
+
+- name: write .zshrc for user
+  template:
+    src: zshrc.j2
+    dest: '{{ shell_path }}'
+    backup: yes
+    mode: 'u=rw,go=r'
+  tags: shell
+
+- name: Clone a repo of zsh custom plugins
+  ansible.builtin.git:
+    repo: '{{ item.url }}'
+    dest: '~/.oh-my-zsh/plugins/{{ item.name }}'
+  loop: '{{ oh_my_zsh_custom_plugins }}'
+  tags: shell
+
+- name: Add custom plugin to zsh profile
+  ansible.builtin.lineinfile:
+    path: '{{ shell_path }}'
+    line: "plugins+=({{ item.name }})"
+    state: present
+    insertafter: EOF
+  loop: '{{ oh_my_zsh_custom_plugins }}'
+  tags: shell
+
+- name: Clone a repo of powerlevel10k
+  ansible.builtin.git:
+    repo: https://github.com/romkatv/powerlevel10k.git
+    dest: '~/.oh-my-zsh/custom/themes/powerlevel10k'
+  tags: shell
+
+- name: Add powerlevel10k theme to zsh profile
+  ansible.builtin.lineinfile:
+    path: '{{ shell_path }}'
+    regexp: '^ZSH_THEME'
+    line: 'ZSH_THEME="powerlevel10k/powerlevel10k"'
+  tags: shell
+
+- name: copy power10 configs
+  ansible.builtin.copy:
+    src: files/shell/power10.zsh
+    dest: ~/.p10k.zsh
+    mode: '0644'
+  tags: shell

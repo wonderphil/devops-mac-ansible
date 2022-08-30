@@ -1,0 +1,83 @@
+---
+- name: Install configured cask applications for Python devs
+  homebrew_cask:
+    name: "{{ item.name | default(item) }}"
+    state: present
+    install_options: "{{ item.install_options | default(omit) }}"
+    accept_external_apps: "{{ homebrew_cask_accept_external_apps }}"
+    sudo_password: "{{ ansible_become_password | default(omit) }}"
+  loop: "{{ python_dev_cask_apps }}"
+  tags: python
+
+- name: Ensure configured homebrew packages are installed.
+  homebrew:
+    name: "{{ item.name | default(item) }}"
+    install_options: "{{ item.install_options | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ python_dev_brew_apps }}"
+  tags: python
+
+- name: Install global Pip packages.
+  pip:
+    name: "{{ item.name | default(item) }}"
+    state: "{{ item.state | default('present') }}"
+    version: "{{ item.version | default(omit) }}"
+    executable: "{{ item.executable | default('pip3') }}"
+  loop: "{{ pip_packages }}"
+  tags: python
+
+- name: Install pycharm
+  homebrew_cask:
+    name: "pycharm"
+    state: present
+    accept_external_apps: false
+  tags: python
+
+- include_tasks: tasks/dock/remove.yml
+  vars:
+    - dockitems_remove: "{{ python_dev_dockitems_remove }}"
+  when: python_dev_configure_dock == true
+  tags: ['python', 'dock']
+
+- include_tasks: tasks/dock.yml
+  vars:
+    - dockitems_persist: "{{ python_dev_dockitems_persist }}"
+  when: python_dev_configure_dock == true
+  tags: ['python', 'dock']
+
+- name: Download PyCharm plugins
+  get_url:
+    url: "{{ pycharm_plugin_download_mirror }}{{ item }}"
+    dest: "{{ pycharm_download_directory }}"
+  register: pycharm_plugins_downloaded
+  with_items: "{{ pycharm_plugins }}"
+  tags: python
+
+- name: Install PyCharm Plugins
+  unarchive:
+    src: "{{ item.dest }}"
+    dest: "/Applications/PyCharm.app/Contents/plugins/"
+  with_items: "{{ pycharm_plugins_downloaded.results }}"
+  tags: python
+
+- name: Install anaconda
+  homebrew_cask:
+    name: "anaconda"
+    state: present
+    accept_external_apps: false
+  when: install_mi == true
+  tags: python
+
+- name: adding anaconda to path
+  ansible.builtin.lineinfile:
+    path: '{{ shell_path }}'
+    line: export PATH=/opt/homebrew/anaconda3/bin:$PATH
+    state: present
+    insertafter: EOF
+  when: install_mi == true
+  tags: python
+
+- name: Conda init
+  shell: export PATH=/opt/homebrew/anaconda3/bin:$PATH && conda init {{ configure_shell }}
+  when: install_mi == true
+  tags: python

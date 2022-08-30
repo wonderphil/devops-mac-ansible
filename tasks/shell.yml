@@ -1,0 +1,22 @@
+---
+- name: Setting zsh profile fact
+  ansible.builtin.set_fact: shell_path="~/.zshrc"
+  when: configure_shell == 'zsh'
+
+- name: Setting bash profile fact
+  ansible.builtin.set_fact: shell_path="~/.bash_profile"
+  when: configure_shell == 'bash'
+
+- name: Touch shell profile
+  ansible.builtin.file:
+    path: "{{ shell_path }}"
+    state: touch
+    mode: 0644
+
+- include_tasks: shell/zsh.yml
+  when: configure_shell == 'zsh'
+  tags: shell
+
+- include_tasks: shell/bash.yml
+  when: configure_shell == 'bash'
+  tags: shell

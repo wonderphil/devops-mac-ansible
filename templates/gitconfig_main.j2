@@ -1,0 +1,16 @@
+{% if git_custom_config %}
+  {{ git_custom_config_block }}
+{% endif %}
+[commit]
+	gpgSign = true
+[tag]
+	forceSignAnnotated = true
+[core]
+	{{ git_excludesfile }}
+[filter "lfs"]
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+[init]
+	defaultBranch = main

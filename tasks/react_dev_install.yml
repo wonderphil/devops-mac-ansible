@@ -1,0 +1,66 @@
+---
+- name: nvm
+  shell: >
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+  args:
+    creates: "~/.nvm/nvm.sh"
+  tags: react
+
+- name: Ensure nvm is in shell profile
+  lineinfile:
+    path: '{{ shell_path }}'
+    regexp: '^export NVM_DIR="$HOME/.nvm"'
+    state: absent
+  check_mode: yes
+  changed_when: false
+  register: nvm_out
+  tags: react
+
+- name: adding nvm to shell
+  ansible.builtin.lineinfile:
+    path: '{{ shell_path }}'
+    line: "{{ item.line }}"
+    state: present
+    insertafter: EOF
+  loop: 
+    - { line: ' ' }
+    - { line: 'export NVM_DIR="$HOME/.nvm"' }
+    - { line: '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm' }
+    - { line: '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' }
+  when: not nvm_out.found
+  tags: react
+
+- name: Sourch shell profile
+  shell: . {{ shell_path }}
+  tags: react
+
+- name: install node {{ nodejs_version }}
+  shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm install {{ nodejs_version }}
+  args:
+    creates: "~/.nvm/versions/node/v{{ nodejs_version }}/bin/node"
+  tags: react
+
+- name: Install global NPM packages.
+  npm:
+    name: "{{ item.name | default(item) }}"
+    state: "{{ item.state | default('present') }}"
+    version: "{{ item.version | default(omit) }}"
+    global: true
+    executable: "{{ item.executable | default(omit) }}"
+  loop: "{{ npm_packages }}"
+  tags: react
+
+- include_tasks: tasks/dock/remove.yml
+  vars:
+    - dockitems_remove: "{{ react_dev_dockitems_remove }}"
+  when: react_dev_configure_dock == true
+  tags: ['react', 'dock']
+
+- include_tasks: tasks/dock.yml
+  vars:
+    - dockitems_persist: "{{ react_dev_dockitems_persist }}"
+  when: react_dev_configure_dock == true
+  tags: ['react', 'dock']

@@ -1,0 +1,101 @@
+---
+- name: Install configured cask applications for Ruby devs
+  homebrew_cask:
+    name: "{{ item.name | default(item) }}"
+    state: present
+    install_options: "{{ item.install_options | default(omit) }}"
+    accept_external_apps: "{{ homebrew_cask_accept_external_apps }}"
+    sudo_password: "{{ ansible_become_password | default(omit) }}"
+  loop: "{{ ruby_dev_cask_apps }}"
+  tags: ruby
+
+- name: Ensure configured homebrew packages are installed.
+  homebrew:
+    name: "{{ item.name | default(item) }}"
+    install_options: "{{ item.install_options | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ruby_dev_brew_apps }}"
+  tags: ruby
+
+- name: Ensure Rbenv is in shell profile
+  lineinfile:
+    path: '{{ shell_path }}'
+    regexp: '^if which rbenv > /dev/null; then eval "$(rbenv init -)"; fi'
+    state: absent
+  check_mode: yes
+  changed_when: false
+  register: rbenv_out
+  tags: ruby
+
+- name: adding Rbenv to shell
+  ansible.builtin.lineinfile:
+    path: '{{ shell_path }}'
+    line: if which rbenv > /dev/null; then eval "$(rbenv init -)"; fi
+    state: present
+    insertafter: EOF
+  when: not rbenv_out.found
+  tags: ruby
+
+- name: Ensure openssl fix is in shell profile
+  lineinfile:
+    path: '{{ shell_path }}'
+    regexp: '^export PATH="opt/homebrew/opt/openssl@1.1/bin:$PATH"'
+    state: absent
+  check_mode: yes
+  changed_when: false
+  register: openssl_out
+  tags: ruby
+
+- name: fixing oppenssl@1 issues with Rbenv to shell  
+  ansible.builtin.lineinfile:
+    path: '{{ shell_path }}'
+    line: export PATH="opt/homebrew/opt/openssl@1.1/bin:$PATH"
+    state: present
+    insertafter: EOF
+  when: not openssl_out.found
+  tags: ruby
+
+- name: Sourch Shell profile
+  shell: . {{ shell_path }}
+  tags: ruby
+
+- name: check if ruby version is installed
+  ansible.builtin.stat:
+    path: ~/.rbenv/versions/{{ ruby_version }}
+  register: ruby_version_folder
+  tags: ruby
+
+- name: Install Ruby using rbenv
+  shell: CFLAGS="-Wno-error=implicit-function-declaration" rbenv install  {{ ruby_version }}
+  when: not ruby_version_folder.stat.isdir is defined and not ruby_version_folder.stat.isdir is defined
+  tags: ruby
+
+- name: set ruby version
+  shell: rbenv global {{ ruby_version }}
+  tags: ruby
+
+- name: Install global Ruby gems.
+  gem:
+    name: "{{ item.name | default(item) }}"
+    state: "{{ item.state | default('present') }}"
+    version: "{{ item.version | default(omit) }}"
+    user_install: false
+    executable: "{{ item.executable | default(omit) }}"
+  loop: "{{ gem_packages }}"
+  tags: ruby
+
+- name: rehash shims
+  shell: rbenv rehash
+  tags: ruby
+
+- include_tasks: tasks/dock/remove.yml
+  vars:
+    - dockitems_remove: "{{ ruby_dev_dockitems_remove }}"
+  when: ruby_dev_configure_dock == true
+  tags: ['ruby', 'dock']
+
+- include_tasks: tasks/dock.yml
+  vars:
+    - dockitems_persist: "{{ ruby_dev_dockitems_persist }}"
+  when: ruby_dev_configure_dock == true
+  tags: ['ruby', 'dock']

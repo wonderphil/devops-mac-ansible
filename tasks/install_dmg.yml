@@ -1,0 +1,37 @@
+---
+- name: Check if {{ appName }} exsits
+  local_action: stat path=/Applications/{{ appName }}.app
+  register: app_exists
+
+- name: Check tmp folder
+  command: mkdir -p /tmp/
+  when: app_exists.stat.exists == False
+
+- name: remove dmg
+  command: rm -R /tmp/converted.* && rm -R /tmp/{{ appName }}.dmg
+  when: app_exists.stat.exists == False
+  ignore_errors: yes
+  
+- name: Download DMG
+  get_url: url={{ dmgURL }} dest=/tmp/{{ appName }}.dmg
+  when: app_exists.stat.exists == False
+
+- name: Convert DMG to CDR to bypass EULA
+  command: hdiutil convert -quiet /tmp/{{ appName }}.dmg -format UDTO -o /tmp/converted
+  when: app_exists.stat.exists == false
+
+- name: mount dmg
+  command: hdiutil attach /tmp/{{ appName }}.dmg -nobrowse -mountpoint /tmp/{{ appName }}
+  when: app_exists.stat.exists == False
+
+- name: copy app to applications
+  shell: cp -aR /tmp/{{ appName }}/*.app /Applications/{{ appName }}.app
+  when: app_exists.stat.exists == False
+
+- name: unmount dmg
+  command: hdiutil detach /tmp/{{ appName }}/
+  when: app_exists.stat.exists == False
+
+- name: remove dmg
+  command: rm -R /tmp/converted.* && rm -R /tmp/{{ appName }}.dmg
+  when: app_exists.stat.exists == False
