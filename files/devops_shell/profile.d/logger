@@ -1,0 +1,99 @@
+#!/usr/bin/env zsh
+
+readonly LOGGER_INFO=daemon.info
+readonly LOGGER_DEBUG=daemon.debug
+readonly LOGGER_WARNING=daemon.warn
+readonly LOGGER_ERROR=daemon.err
+
+function logger_info() {
+	_logger ${LOGGER_INFO} "$1"
+}
+
+function logger_debug() {
+	if [[ "$SHELL_DEBUG_MODE" == true ]]; then
+		_logger ${LOGGER_DEBUG} "$1"
+	else
+		# suppress stdout when debug mode is off (default)
+		_logger ${LOGGER_DEBUG} "$1" >/dev/null
+	fi
+}
+
+function logger_debug_exec() {
+	while IFS= read -r line; do logger_debug "$line"; done < <(${1} 2>&1)
+}
+
+function logger_warning() {
+	_logger ${LOGGER_WARNING} "$1"
+}
+
+function logger_error() {
+	_logger ${LOGGER_ERROR} "$1" 1>&2
+}
+
+function turn_on_debug_mode() {
+	export SHELL_DEBUG_MODE=true
+	logger_info "shell debug mode is on"
+}
+
+function turn_off_debug_mode() {
+	unset SHELL_DEBUG_MODE
+	logger_info "shell debug mode is off"
+}
+
+function set_logger_file() {
+	local logger_file_name=$1
+
+	if [[ -z ${logger_file_name} ]]; then
+		logger_file_name=${LOGGER_DEFAULT_FILE_NAME}
+	fi
+
+	if [[ "${logger_file_name}" != *.log ]]; then
+		logger_file_name="${logger_file_name}.log"
+	fi
+
+	logger_info "logs will be stored in $logger_file_name"
+	export LOGGER_FILE_PATH=${LOGGER_FOLDER_PATH}/${logger_file_name}
+}
+
+function set_default_logger_file() {
+	logger_info "logs will be stored in $LOGGER_DEFAULT_FILE_NAME"
+	export LOGGER_FILE_PATH=${LOGGER_FOLDER_PATH}/${LOGGER_DEFAULT_FILE_NAME}
+}
+
+function _logger() {
+	local severity="$1"
+	local message="$2"
+	local src
+	src=$(basename "${funcfiletrace[2]}" | cut -d':' -f1)
+	message=$(printf "${src}:${funcstack[-1]} - ${message}")
+	logger -p "${severity}" -is "${message}" 2>&1 | tee -a "${LOGGER_FILE_PATH}"
+}
+
+function _reset_log_files() {
+	while true; do
+		logger_warning "all shell log files will be reset with no restore option!"
+		read -p "do you want to reset all log files?" yn
+		case $yn in
+		[Yy])
+			logger_debug "resetting all log files"
+			for file in "$LOGGER_FOLDER_PATH"/*; do
+				echo >"$file"
+			done
+			break
+			;;
+		[Nn])
+			exit
+			;;
+		*)
+			echo "valid choice [y/n]"
+			;;
+		esac
+	done
+}
+
+# bool function to detect if previous log message has string matching provided pattern
+function _log_reduce() {
+	local pattern="${1}"
+
+	tac $LOGGER_FILE_PATH | grep -m 1 '.' | grep "${pattern}" -q
+}

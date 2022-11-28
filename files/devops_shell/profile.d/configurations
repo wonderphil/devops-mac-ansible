@@ -1,0 +1,14 @@
+#!/usr/bin/env zsh
+
+function _config_shell() {
+	_source_virtualenv_wrapper
+}
+
+function _activate_neofetch_command() {
+	neofetch --config "$LOCAL_NEOFETCH_FILE_PATH"
+}
+
+function _set_shell() {
+	_set_aliases
+	_activate_neofetch_command
+}

@@ -1,0 +1,65 @@
+---
+- name: create Main devops shell folder
+  ansible.builtin.file:
+    path: "{{ devops_shell_folder }}"
+    state: directory
+    mode: '0755'
+  tags: devops_shell
+
+- name: create Sub folders for devops shell
+  ansible.builtin.file:
+    path: "{{ devops_shell_folder }}/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ devops_shell_sub_folders }}"
+  tags: devops_shell
+
+- name: copy devops shell files configs
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ devops_shell_folder }}/profile.d/{{ item }}"
+    mode: '0644'
+  with_fileglob: 
+    - files/devops_shell/profile.d/*
+  tags: devops_shell
+
+- name: copy devops shell zsh_completions files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ devops_shell_folder }}/zsh_completions/{{ item }}"
+    mode: '0644'
+  with_fileglob: 
+    - files/devops_shell/configurations/zsh_completions/*
+  tags: devops_shell
+
+- name: copy devops shell neofetch files
+  ansible.builtin.copy:
+    src: files/devops_shell/configurations/neofetch.conf
+    dest: "{{ devops_shell_folder }}/system/neofetch.conf"
+    mode: '0644'
+  tags: devops_shell
+
+- name: Install devops shell Pip packages.
+  pip:
+    name: "{{ item }}"
+    state: "present"
+    executable: "pip3"
+  loop: 
+    - virtualenvwrapper
+    - better_exceptions
+    - yapf
+  tags: devops_shell
+
+- name: create yapf folder
+  ansible.builtin.file:
+    path: "~/.config/yapf"
+    state: directory
+    mode: '0755'
+  tags: devops_shell
+
+- name: copy devops shell yapf files
+  ansible.builtin.copy:
+    src: files/devops_shell/configurations/yapf/style
+    dest: "~/.config/yapf/style"
+    mode: '0644'
+  tags: devops_shell

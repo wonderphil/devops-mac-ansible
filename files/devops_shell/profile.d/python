@@ -1,0 +1,195 @@
+#!/usr/bin/env zsh
+
+readonly YAPF_LOCAL_STYLE_FOLDER=$HOME/.config/yapf
+readonly YAPF_LOCAL_STYLE_FILE=$YAPF_LOCAL_STYLE_FOLDER/style
+
+
+function show_python_pointers() {
+	# exhibit only path and translation
+	which -p python pip ipython pytest | xargs ls -ltr | tr -s " " | cut -d" " -f9-
+}
+
+function poetry_build() {
+	repository_name=$1
+	version=$2
+
+	# validations
+	if [[ "$#" -lt 2 ]]; then
+		logger_error "required repository name and version where version can be one of the following (major, minor, patch)"
+		return 1
+	fi
+
+	if [[ ! $(sts_chk | jq '.Account') == *"${KIO_STORAGE_ACCOUNT_ID}"* ]]; then
+		logger_error "must sts to storage account, please run sts_set kio_storage"
+		return 1
+	fi
+
+	cd ${PROJECT_DEVOPS_PYTHON}/devops-module
+	poetry_login_to_code_artifact ${repository_name}
+	if [[ "$?" != 0 ]]; then
+		logger_error "an error ocuured during login to aws code artifact"
+		return 1
+	fi
+
+	poetry_set_version ${version}
+	if [[ "$?" != 0 ]]; then
+		logger_error "an error ocuured during setting the version of poetry"
+		return 1
+	fi
+
+	poetry update -vvv
+	poetry build -vvv
+	cd - >/dev/null
+	logger_warning "the package will not published to aws code artifact, github action will publish it to aws codeartifact before merging"
+
+	# to publish the package to aws codeartifact run
+	# poetry publish -r $repository_name --username aws --password ${code_artifact_auth_token}
+}
+
+function poetry_login_to_code_artifact() {
+	repository_name=$1
+
+	# validations
+	if [[ "$#" -lt 1 ]]; then
+		logger_error "repository name required"
+		return 1
+	fi
+
+	if [[ ! $(sts_chk | jq '.Account') == *"${KIO_STORAGE_ACCOUNT_ID}"* ]]; then
+		logger_error "must sts to storage account, please run sts_set kio_storage"
+		return 1
+	fi
+
+	code_artifact_auth_token=`_get_code_artifact_auth_token`
+	_set_code_artifact_using_pip $code_artifact_auth_token $repository_name
+}
+
+function del_pyc() {
+	find . -name "*.pyc" -type f -delete -print
+	logger_debug "deleted *.pyc in directory"
+}
+
+function virtualenv_termination() {
+	virtualenv_deactivate && _remove_latest_used_virtualenv
+	logger_debug "virtualenv terminated"
+}
+
+function virtualenv_resume() {
+	if [[ "$1" == "true" ]] || [[ "$1" == "false" ]]; then
+		_write_config RESUME_VIRTUALENV "$1" "${LOCAL_DEVOPS_CONFIG_FILE_PATH}"
+		logger_debug "virtualenv resumed"
+	else
+		logger_warning "please enter a bool value:[true, false]"
+	fi
+}
+
+function virtualenv_create() {
+	local venv_name="$1"
+	_virtualenv_create ${venv_name} && _set_previous_virtualenv ${venv_name}
+	logger_debug "virtualenv ${venv_name} created"
+}
+
+function virtualenv_activate() {
+	local venv_name="$1"
+	if [[ $# -eq 0 ]]; then
+		logger_error "failure: must choose a virtualenv to activate: \n$(virtualenv_list)"
+		return 1
+	fi
+	_virtualenv_activate ${venv_name} && _set_previous_virtualenv ${venv_name} || {
+		logger_error "failed to virtualenv_activate into '$venv_name'\nexisting virtualenvs: \n$(virtualenv_list)"
+		return 1
+	}
+}
+
+function virtualenv_list() {
+	lsvirtualenv -b
+}
+
+function pyfmt() {
+	if [[ "$#" -eq 0 ]]; then
+		logger_warning "please specify the files you wish to format"
+	else
+		_yapf_base "-i" $@
+	fi
+}
+
+function pyfmt_recursive() {
+	# -i: make changes in place
+	# -r: run recursively in current dir
+	_yapf_base -ir .
+}
+
+function _yapf_base() {
+	yapf --verbose $@
+	logger_debug "yapf formatter executed"
+
+}
+
+function _virtualenv_activate() {
+	local venv_name="$1"
+	workon --cd ${venv_name} 2>/dev/null || return 1
+	logger_debug "virtualenv {$venv_name} activated successfully"
+}
+
+function _virtualenv_create() {
+	local venv_name="$1"
+	mkvirtualenv --python="$(which python)" "${venv_name}"
+	logger_debug "virtualenv {$venv_name} created successfully"
+}
+
+function _set_previous_virtualenv() {
+	_write_config LAST_USED_VIRTUALENV "$1" "${LOCAL_DEVOPS_CONFIG_FILE_PATH}"
+}
+
+function _set_latest_virtualenv() {
+	if [[ $(_read_config RESUME_VIRTUALENV "${LOCAL_DEVOPS_CONFIG_FILE_PATH}") == "true" ]]; then
+		_virtualenv_activate "$(_read_config LAST_USED_VIRTUALENV "${LOCAL_DEVOPS_CONFIG_FILE_PATH}")"
+	fi
+}
+
+function _remove_latest_used_virtualenv() {
+	_write_config LAST_USED_VIRTUALENV "null" "${LOCAL_DEVOPS_CONFIG_FILE_PATH}"
+}
+
+function _set_virtualenv_aliases() {
+	alias virtualenv_runonall=allvirtualenv
+	alias virtualenv_remove=rmvirtualenv
+	alias virtualenv_cd=cdvirtualenv
+	alias virtualenv_lspkgs=lssitepackages
+	alias virtualenv_sitepackages=toggleglobalsitepackages
+}
+
+function _edit_yapf() {
+	"${EDITOR}" "${YAPF_LOCAL_STYLE_FILE}"
+}
+
+function _get_code_artifact_auth_token() {
+	logger_debug "getting code artifact auth token"
+	code_artifact_auth_token=`aws codeartifact get-authorization-token --domain kryon-artifacts --domain-owner ${KIO_STORAGE_ACCOUNT_ID} --query authorizationToken --output text --region us-east-1`
+
+	if (( $? != 0 )); then
+		return 1
+	fi
+
+	echo ${code_artifact_auth_token}
+}
+
+function _set_code_artifact_using_pip(){
+	code_artifact_auth_token=$1
+	repository_name=$2
+	logger_debug "setting the code artifact using pip"
+	pip config set global.extra-index-url https://aws:${code_artifact_auth_token}@kryon-artifacts-${KIO_STORAGE_ACCOUNT_ID}.d.codeartifact.us-east-1.amazonaws.com/pypi/${repository_name}/simple/
+}
+
+function poetry_set_version() {
+	version=$1
+	versions=("major" "minor" "patch")
+
+	# validations
+	if [[ "$#" -lt 1 ]] || [[ ${versions[(ie)${version}]} -gt ${#versions} ]]; then
+		logger_error "required package version, it must be one of the following: ${versions}"
+		return 1
+	fi
+
+	poetry version ${version}
+}

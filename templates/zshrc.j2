@@ -110,4 +110,27 @@ fi
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
+{% if 'devops_shell' == true %}
 
+################# DEVOPS SHELL ###############
+# pre-source:
+PROFILE_D_PATH="~/.devops_shell/profile.d"
+VARIABLES_IDENTIFIER="variables"
+source "$PROFILE_D_PATH/$VARIABLES_IDENTIFIER"
+
+touch ${LOGGER_FOLDER_PATH}/${LOGGER_DEFAULT_FILE_NAME}
+
+export DEVOPS_USER={{ devops_shell_user }}
+
+# source devops shell files
+for source_file in "$PROFILE_D_PATH"/*; do [[ "$source_file" != "$VARIABLES_IDENTIFIER" ]] && source "${source_file}"; done
+
+# main
+function main() {
+	_config_shell
+	_set_shell
+}
+
+main "${@}"
+
+{% endif %}

@@ -106,6 +106,7 @@ homebrew_taps:
   - homebrew/cask
   - homebrew/cask-drivers
   - homebrew/core
+  - homebrew/services
 
 homebrew_cask_uninstalled_apps: []
 homebrew_cask_accept_external_apps: false
@@ -187,6 +188,7 @@ homebrew_installed_packages:
   - kubernetes-cli
   - libpq
   - mysql
+  - neofetch
   - node
   - openjpeg
   - packer
@@ -293,13 +295,13 @@ git_custom_config_block: |
 
   [includeIf "gitdir:~/repos/personal/"]
     path = ~/.gitconfig-personal
-  [includeIf "gitdir:~/git/"]
+  [includeIf "gitdir:~/repos/work/"]
     path = ~/.gitconfig-work
 
-git_excludesfile: ''
+git_excludesfile: '~/.gitignore_global'
 repo_folders:
   - "~/repos/personal"
-  - "~/git"
+  - "~/repos/work"
 
 git_custom_config_files:
   - "gitconfig-personal"
@@ -307,3 +309,14 @@ git_custom_config_files:
 
 gpg_config: true
 config_iterm: true
+
+devops_shell: true
+devops_shell_user: pdavies
+devops_shell_folder: ~/.devops_shell
+devops_shell_sub_folders:
+  - profile.d
+  - Logs
+  - system
+  - services
+  - tools
+  - zsh_completions

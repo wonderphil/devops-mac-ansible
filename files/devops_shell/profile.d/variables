@@ -1,0 +1,28 @@
+#!/usr/bin/env zsh
+
+#load global sts envars before executing PS1
+export PROMPT_COMMAND="$PROMPT_COMMAND; _sts_prompt"
+
+export SSH_CONFIG_DIR=${HOME}/.ssh
+
+# aws-cli
+export AWS_CONFIG_DIR=${HOME}/.aws
+export AWS_CONFIG_FILE_PATH=${AWS_CONFIG_DIR}/config
+## The AWS CLI always uses the AWS STS endpoint for the currently configured Region.
+## https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html#cli-configure-files-settings
+export AWS_STS_REGIONAL_ENDPOINTS=regional
+
+# local devops shell files and folders
+export LOCAL_DEVOPS_SHELL_FOLDER_PATH=~/.devops_shell
+export LOCAL_SYSTEM_FOLDER_PATH=${LOCAL_DEVOPS_SHELL_FOLDER_PATH}/system
+export LOCAL_SERVICES_FOLDER_PATH=${LOCAL_DEVOPS_SHELL_FOLDER_PATH}/services
+export LOCAL_TOOLS_FOLDER_PATH=${LOCAL_DEVOPS_SHELL_FOLDER_PATH}/tools
+export LOCAL_NEOFETCH_FILE_PATH=${LOCAL_SYSTEM_FOLDER_PATH}/neofetch.conf
+
+# # logger
+export LOGGER_FOLDER_PATH=${LOCAL_DEVOPS_SHELL_FOLDER_PATH}/Logs/
+export LOGGER_DEFAULT_FILE_NAME=devops_shell.log
+export LOGGER_FILE_PATH=${LOGGER_FOLDER_PATH}/${LOGGER_DEFAULT_FILE_NAME}
+
+
+typeset -g LOCAL_DEVOPS_SHELL_ZSH_COMPLETIONS_PATH=${LOCAL_DEVOPS_SHELL_FOLDER_PATH}/zsh_completions

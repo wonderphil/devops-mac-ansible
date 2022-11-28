@@ -18,9 +18,17 @@
 
 - name: copy git configs
   ansible.builtin.copy:
-    src: files/git/{{ item }}
+    src: files/git/configs/{{ item }}
     dest: "~/.{{ item }}"
     mode: '0644'
   when: git_custom_config == true
   loop: "{{ git_custom_config_files }}"
+  tags: git
+
+- name: copy git ignore files
+  ansible.builtin.copy:
+    src: files/git/gitignore_global
+    dest: "~/.gitignore_global"
+    mode: '0644'
+  when: git_custom_config == true
   tags: git

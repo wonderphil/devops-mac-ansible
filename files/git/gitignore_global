@@ -1,0 +1,81 @@
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+Icon?
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Tests #
+############
+*test.py
+*test.sh
+*test.js
+
+# Python #
+############
+*.pyc
+*.egg-info/
+*.mypy
+*.mypy*
+dist
+o365_token.txt
+
+# Terraform #
+############
+.terraform/
+terraform.tfstate*
+/**/.terragrunt-cache
+.test/
+
+# NodeJS #
+############
+node_modules
+
+# IDEs #
+############
+.idea
+*.iml
+.vscode
+
+# Packages #
+############
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+
+# Logs #
+############
+*.log
+
+# Git #
+############
+.gitignore
+
+# Compiled source #
+###################
+*.o
+*.so
+*.class
+*.dll
+
+# Temporary files #
+###################
+*.swp
+*.swo
+*~
+*.lock
+
+# Brew #
+###################
+brew_requirements.lock.json
+
+# ZSH #
+###################
+.zplug

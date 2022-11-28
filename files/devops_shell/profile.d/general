@@ -1,0 +1,159 @@
+#!/usr/bin/env zsh
+
+function _source_virtualenv_wrapper() {
+	# https://virtualenvwrapper.readthedocs.io/en/latest/command_ref.html
+	source "$(command -v virtualenvwrapper.sh)"
+}
+
+function _set_aliases() {
+	# _set_virtualenv_aliases # TODO: Not working need to all at 
+	_set_generic_aliases
+}
+
+function generate_password() {
+	local password_max_length="$1"
+	logger_debug "generating password"
+	if [[ -z ${password_max_length} ]]; then
+		MAXSIZE=8
+	else
+		MAXSIZE=${password_max_length}
+	fi
+	pwgen ${MAXSIZE} 1 --capitalize --numerals --symbols
+}
+
+function _chuck_norris_joke() {
+	curl --silent --show-error --fail https://api.chucknorris.io/jokes/random 2>/dev/null | jq -r '.value'
+}
+
+function _timestamp() {
+	date +"%H_%M_%S_%d_%m_%Y"
+}
+
+function show_open_ports() {
+	local pattern="$1"
+
+	if [ $# -eq 0 ]; then
+		sudo lsof -i4 -sTCP:LISTEN -n -P
+	elif [ $# -eq 1 ]; then
+		sudo lsof -i4 -sTCP:LISTEN -n -P | grep -i --color "${pattern}"
+	else
+		logger_error "usage: show_open_ports [pattern]"
+	fi
+}
+
+function _get_aws_account_aliases() {
+	local aws_profile="${1:-}"
+
+	aws iam list-account-aliases \
+		--query 'AccountAliases[0]' \
+		--output text \
+		--profile "${aws_profile}"
+}
+
+function _get_ssm_parameter() {
+	local name="$1"
+	local region="${2:-us-east-1}"
+
+	response=$(aws ssm get-parameter \
+				--name "${name}" \
+				--with-decryption \
+				--region "${region}" \
+				--query 'Parameter.Value' \
+				--output text 2>&1)
+
+	rc=$?
+
+	if (( "${rc}" != 0 )); then
+		local msg_dbg="get ssm parameter [${name}] failed with error:${response}\nexit code: ${rc}"
+		logger_debug "${msg_dbg}"
+
+		return "${rc}"
+	fi
+
+	logger_debug "successfully received ssm param value for: ${name}"
+	echo "${response}"
+}
+
+
+
+
+function _set_generic_aliases() {
+	alias ls='ls -GFh'
+	alias l='ls -CFrat'
+	alias ll='ls -lGaft'
+	alias lle='exa -lFahgUm --color=always --color-scale --group-directories-first -s=modified --git'
+	alias lse='exa --group-directories-first --long --icons --header --git --time-style long-iso'
+	alias updatedb="sudo /usr/libexec/locate.updatedb"
+	alias powershell=pwsh
+	alias jsc="/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Resources/jsc"
+	alias slog='show_logs'
+	alias cls=clear
+	alias rbm='rebase_me'
+	alias sed='gsed'
+
+	# hidden dirs quick navigation and edit
+	alias _.aws='cd ${AWS_CONFIG_DIR}'
+	alias _.ssh='cd ${SSH_CONFIG_DIR}'
+	alias _edit_aws="${EDITOR} ${AWS_CONFIG_DIR}/*"
+	alias _edit_ssh="${EDITOR} ${SSH_CONFIG_DIR}/*"
+
+	# terraform/terragrunt aliases
+	alias tfcc='terraform_clean_cache'
+
+	# quick navigation
+	alias cd..='cd ..' ## a quick way to get out of current directory ##
+	alias ..="cd .."
+	alias ...="cd ../.."
+	alias ....="cd ../../.."
+	alias .....="cd ../../../.."
+	alias ......="cd ../../../../.."
+	alias .......="cd ../../../../../.."
+	alias ........="cd ../../../../../../.."
+	alias .1='cd ../'
+	alias .2='cd ../../'
+	alias .3='cd ../../../'
+	alias .4='cd ../../../../'
+	alias .5='cd ../../../../..'
+	alias .6='cd ../../../../../..'
+	alias .7='cd ../../../../../../..'
+	alias .8='cd ../../../../../../../..'
+
+	# enable aliases to be sudo’ed
+	alias sudo='sudo '
+	alias grep='grep --color=auto'
+
+	# git aliases
+	alias git_log="git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+}
+
+function show_logs() {
+	lnav "$LOGGER_FOLDER_PATH"
+}
+
+function rebase_me() {
+	current_branch=$(git branch --show-current)
+	changes="$(git status --porcelain | wc -l)"
+	if [ "$changes" -eq "0" ]; then
+		echo "🟢 branch $current_branch is cleaned"
+	else
+		echo "🔴 branch $current_branch is dirty!"
+		return 1
+	fi
+
+	git checkout master
+	git pull --rebase
+	if [[ $? -ne 0 ]]; then
+		git rebase --abort
+		git checkout "$current_branch"
+		return 1
+	fi
+
+	git checkout "$current_branch"
+	git rebase master
+	if [[ $? -ne 0 ]]; then
+		git rebase --abort
+		return 1
+	fi
+
+	git push origin "$current_branch" --force
+}

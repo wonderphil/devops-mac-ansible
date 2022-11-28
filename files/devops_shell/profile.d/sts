@@ -1,0 +1,251 @@
+#!/usr/bin/env zsh
+
+readonly STS_DEFAULT_DURATION=1h
+export STS_ENV STS_TTL
+
+# function sts_list_role_arn() {
+# 	avp
+# }
+
+# function sts_console_login() {
+# 	avl ${STS_ENV}
+# }
+
+function sts_list_account() {
+	aws-vault list
+}
+
+function sts_set() {
+	desired_env="$1"
+
+	# validations
+	if [[ "$#" -lt 1 ]]; then
+		logger_error "not enough arguments, type -h|--help to show help"
+		return 1
+	elif [[ "$#" -eq 1 ]]; then
+		[[ $1 == -* ]] && _sts_set_usage && return 1
+	fi
+
+	# test that desired env is present in aws config
+	all_envs=$(aws-vault list --profiles)
+	if [[ ${all_envs[(ie)$desired_env]} -gt ${#all_envs} ]]; then
+		logger_error "invalid env name:[$desired_env], check your aws profile"
+		return 1
+	fi
+	shift
+
+	while [[ "$#" -gt 0 ]]; do
+		local option="$1"
+		case ${option} in
+			-f | --force)
+				sts_unset --quiet
+				;;
+			-h | --help)
+				_sts_set_usage
+				return 1
+				;;
+			*)
+				logger_error "unknown option: [${option}], type -h|--help to show help"
+				return 1
+		esac
+		shift
+	done
+
+	logger_debug "connecting to ${desired_env}"
+	[[ "${STS_TTL}" == "expired" ]] && sts_unset -q
+	export STS_ENV=${desired_env}
+	aws-vault exec ${STS_ENV} --duration ${STS_DEFAULT_DURATION} || notification_error "failed to set sts environment [${STS_ENV}]"
+}
+
+function sts_unset() {
+
+	[[ -z "$STS_ENV" ]] && logger_debug "got no sts environment, exiting" && return
+
+	local msg="successfully unset sts environment ${STS_ENV}"
+	local option="$1"
+
+	_unset_aws_access_keys
+
+	case "${option}" in
+		--quiet | -q)
+			logger_debug "${msg} quietly"
+		;;
+		*)
+			logger_debug "${msg}"
+			notification_info "${msg}"
+		;;
+	esac
+	unset STS_ENV
+}
+
+function _sts_ttl_chk() {
+	[[ "${STS_GLOBAL}" == "true" ]] && _export_global_sts_variables
+
+	if [[ -z "${AWS_SESSION_EXPIRATION}" ]]; then
+		_log_reduce 'token is unset' || logger_debug "STS token is unset"
+		STS_TTL='unset'
+		# STS_ENV='local'
+		[[ "${SHELL_DEBUG_MODE}" == "true" ]] || return 1
+	# verify that current epoch is greater then epoch of the sts token expiration date
+	elif (($(gdate -u +"%s") > $(gdate -u -d "${AWS_SESSION_EXPIRATION}" +"%s"))); then
+		_log_reduce 'token has expired' || logger_debug "STS token has expired: [$(gdate -u +"%d%b%y %H:%M:%S") > $(gdate -u -d "${AWS_SESSION_EXPIRATION}" +"%d%b%y %H:%M:%S")]"
+		STS_TTL='expired'
+		export STS_TTL
+		# sts_unset -q
+	# calculate the time until sts token is expired
+	else
+		expired_in=$(gdate -u -d "${AWS_SESSION_EXPIRATION}" +"%s")
+		valid_for=$(gdate -d "0 ${expired_in} sec - $(gdate -u +"%s") sec" +"%H:%M:%S")
+		# print log line only if previous one is different
+		_log_reduce 'token is valid' || logger_debug "STS token is valid for the next: [${valid_for}]"
+		STS_TTL="${valid_for}"
+	fi
+
+	[[ "${STS_GLOBAL}" == "true" ]] && _set_global_sts_variables
+
+	return 0
+}
+
+# validate default profile exist or show current aws credentials
+function sts_chk() {
+	local option="${1}"
+
+	case "${option}" in
+		-t | --validate)
+			logger_debug "validating aws profile for sts"
+			response=$(aws sts get-caller-identity 2>&1)
+			rc=$?
+			if ((rc != 0)); then
+				logger_error "Default profile missing. ${response}" && return "${rc}";
+			fi
+		;;
+		-v | --verbose | *)
+			aws sts get-caller-identity || _unset_aws_access_keys
+		;;
+	esac
+}
+
+function _unset_aws_access_keys() {
+	logger_debug "unset aws access keys and sts variables"
+	aws-vault remove $STS_ENV --sessions-only &> /dev/null
+	unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_SESSION_EXPIRATION STS_ENV STS_TTL AWS_VAULT
+	_unset_global_sts_variables
+}
+
+function _set_global_sts_variables() {
+	logger_debug "setting global sts variables: ${STS_TTL}"
+	launchctl setenv AWS_ACCESS_KEY_ID "${AWS_ACCESS_KEY_ID}"
+	launchctl setenv AWS_SECRET_ACCESS_KEY "${AWS_SECRET_ACCESS_KEY}"
+	launchctl setenv AWS_SESSION_TOKEN "${AWS_SESSION_TOKEN}"
+	launchctl setenv AWS_SESSION_EXPIRATION "${AWS_SESSION_EXPIRATION}"
+	launchctl setenv AWS_VAULT "${AWS_VAULT}"
+	launchctl setenv STS_ENV "${STS_ENV}"
+	launchctl setenv STS_TTL "${STS_TTL}"
+
+}
+
+function _unset_global_sts_variables() {
+	logger_debug "unset global aws access keys and sts variables"
+	launchctl unsetenv AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_SESSION_EXPIRATION AWS_VAULT STS_ENV STS_TTL
+}
+
+# if global sts are set, export them locally
+function _export_global_sts_variables() {
+	logger_debug "exporting global sts variables"
+
+	AWS_ACCESS_KEY_ID="$(launchctl getenv AWS_ACCESS_KEY_ID)"
+	AWS_SECRET_ACCESS_KEY="$(launchctl getenv AWS_SECRET_ACCESS_KEY)"
+	AWS_SESSION_TOKEN="$(launchctl getenv AWS_SESSION_TOKEN)"
+	AWS_SESSION_EXPIRATION="$(launchctl getenv AWS_SESSION_EXPIRATION)"
+	AWS_VAULT="$(launchctl getenv AWS_VAULT)"
+	STS_ENV="$(launchctl getenv STS_ENV)"
+	STS_TTL="$(launchctl getenv STS_TTL)"
+
+	export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_SESSION_EXPIRATION AWS_VAULT STS_ENV STS_TTL
+}
+
+function _sts_set_usage() {
+	ALL_ENVS=$(_get_all_envs)
+	local yellow normal
+
+	yellow=$(tput setaf 11)
+	normal=$(tput sgr0)
+
+	cat <<- HELP_USAGE
+	Usage:
+	  ${yellow} ${FUNCNAME[1]} <ENV> [OPTIONS]${normal}
+	Available environments:
+	  $(printf %s "${ALL_ENVS//$'\n'/' | '}")
+	Special cases:
+	  If using 'custom' sts_set the following usage is available
+	  ${yellow} ${FUNCNAME[1]} custom [<iam user/role arn> | <aws account id>]${normal}
+	Options:
+	  -f | --force : Renew STS Token even if it's still valid
+	  -q | --quiet : Skip notifications
+	  -h | --help  : Print this help
+	Notes:
+	${yellow}
+	**IMPORTANT**
+	  You must set the aws accounts trusts as a prerequisite
+	${normal}
+	HELP_USAGE
+}
+
+function set_sts_globally() {
+	local option="${1:-on}"
+
+	_usage() {
+		cat <<- HELP_USAGE
+		Usage:
+		  ${FUNCNAME[1]} [OPTIONS]
+		Options:
+		  --on|on|  : Set STS session credentials globally for current user (Default behavior of called w/o params).
+		  --off|off : Disable global STS session credentials: allows to have different sts sessions in shell sessions.
+		HELP_USAGE
+	}
+
+	# validations
+	if [ "$#" -gt 1 ]; then
+		logger_error "too many arguments, type -h|--help to show help"
+		_usage
+		return 1
+	fi
+
+	case "${option}" in
+		--off | off)
+			enabled='false'
+			_write_config STS_GLOBAL "${enabled}" "$LOCAL_DEVOPS_CONFIG_FILE_PATH"
+			logger_debug "sts_set session credentials will be limited to shell session scope"
+			_unset_global_sts_variables
+		;;
+		--on | on)
+			enabled='true'
+			_write_config STS_GLOBAL "${enabled}" "$LOCAL_DEVOPS_CONFIG_FILE_PATH"
+			logger_debug "sts_set session credentials will be global for current user"
+		;;
+		-h | --help | *)
+			_usage
+			return
+		;;
+	esac
+}
+
+# load default profile credentials as env vars
+function _aws_profile_to_env_vars() {
+	local aws_profile="${1:-default}"
+
+	# validate default profile
+	sts_chk -t || return $?
+
+	logger_debug "setting local profile: [${aws_profile}] as AWS_ env vars"
+	AWS_ACCESS_KEY_ID=$(aws configure get ${aws_profile}.aws_access_key_id)
+	AWS_SECRET_ACCESS_KEY=$(aws configure get ${aws_profile}.aws_secret_access_key)
+
+	export AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID
+}
+
+function _get_all_envs() {
+	_read_config "-pp" "${LOCAL_DEVOPS_CONFIG_FILE_PATH}" "ENV.*"  \
+ | awk '{print tolower($0)}'  \
+ | cut -d'.' -f2
+}

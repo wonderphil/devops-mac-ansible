@@ -1,0 +1,126 @@
+#!/usr/bin/env zsh
+
+readonly IMPORTS_PATH_NAME=imports
+readonly IMPORTS_FILE_PATH_EXTENSION=$IMPORTS_PATH_NAME/importsRun.txt
+
+# vars read by terraform before execution
+export TF_VAR_USERNAME=$DEVOPS_USER
+
+function terraform_debug_set() {
+	logger_debug "terraform debug: on"
+	export TF_LOG=DEBUG
+}
+
+function terraform_debug_unset() {
+	logger_debug "terraform debug: off"
+	unset TF_LOG
+}
+
+function terraform_clear_dir() {
+	local TF_STATE_DEL=$1
+	logger_debug "deleting terraform local assests"
+	rm -rfv .terraform/
+	if [[ ${TF_STATE_DEL} == "-s" ]]; then
+		rm -fv terraform.tfstate*
+	fi
+}
+
+function terraform_run_it_all() {
+	local TF_AUTO=$1
+	logger_debug "invoking terraform init and apply"
+	terraform init
+	if [[ "$TF_AUTO" == "-a" ]]; then
+		terraform apply -auto-approve
+	else
+		terraform apply
+	fi
+}
+
+function terraform_fmt_recursive() {
+	terraform fmt -recursive
+}
+
+# cleanup terragrunt/terraform caches recursively
+function terraform_clean_cache() {
+	rm -rf ./**/.terragrunt-cache
+}
+
+function tf_manage_state() {
+	local terragrunt_command="$1"
+	local resource="$2"
+	local value="$3"
+
+	_usage() {
+		cat <<- HELP_USAGE
+		Usage:
+		  ${FUNCNAME[1]} import <resource> <value>
+		  ${FUNCNAME[1]} remove <resource>
+		HELP_USAGE
+	}
+
+	case "$terragrunt_command" in
+	import)
+		if [ "$#" -ne 3 ]; then
+			logger_error "import command should get 2 arguments. please read usage"
+			_usage
+			return 1
+		fi
+		_terragrunt_import_resource "$resource" "$value"
+		;;
+	remove)
+		if [ "$#" -ne 2 ]; then
+			logger_error "remove command should get 1 argument. please read usage"
+			_usage
+			return 1
+		fi
+		_terragrunt_remove_resource "$resource"
+		;;
+	*)
+		logger_warning "\"$terragrunt_command\" is not a valid command. usages: {import|remove}"
+		;;
+	esac
+}
+
+function _tf_write_import_commands() {
+	local command="${1}"
+
+	echo -e "${command}\n" >> $IMPORTS_FILE_PATH_EXTENSION
+}
+
+function _tf_delete_import_commands() {
+	local resource="${1}"
+
+	remove_line_result=$(sed '/'"$resource"'/d' $IMPORTS_FILE_PATH_EXTENSION)
+	echo "$remove_line_result" | sed '/^$/d' > $IMPORTS_FILE_PATH_EXTENSION
+	add_seperate_lines=$(awk '1;!(NR%1){print "";}' $IMPORTS_FILE_PATH_EXTENSION)
+	echo -e "$add_seperate_lines\n" > $IMPORTS_FILE_PATH_EXTENSION
+}
+
+function _terragrunt_import_resource() {
+	local resource="$1"
+	local value="$2"
+	local command="$(printf "terragrunt import %s %s" "${resource}" "${value}")"
+
+	eval "${command}" || return 1
+
+	_tf_imports_file_validation
+	_tf_write_import_commands "${command}"
+}
+
+function _terragrunt_remove_resource() {
+	local resource="$1"
+	local command="$(printf "terragrunt state rm %s" "${resource}")"
+
+	eval "${command}" || return 1
+
+	_tf_delete_import_commands "${resource}"
+}
+
+function _tf_imports_file_validation() {
+	local import_file_path
+	mkdir -p $IMPORTS_PATH_NAME
+	import_file_path=$(pwd)/$IMPORTS_FILE_PATH_EXTENSION
+	if [ ! -f "$import_file_path" ]; then
+		touch $IMPORTS_FILE_PATH_EXTENSION
+	fi
+}

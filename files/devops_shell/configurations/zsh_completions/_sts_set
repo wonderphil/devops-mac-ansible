@@ -1,0 +1,25 @@
+#compdef sts_set
+
+# sts_set zsh completion
+_sts_set() {
+	local state
+
+	_arguments \
+		'1: :->sts_envs' \
+		'*: :->args'
+
+	case $state in
+		sts_envs)
+			_describe 'command' "($(aws-vault list --profiles))"
+			;;
+		*)
+			local args; args=(
+				'-f:use force luke'
+				'-h:show help'
+			)
+			_describe -t args 'arg' args && ret=0
+		;;
+ 	esac
+}
+
+_sts_set "$@"
