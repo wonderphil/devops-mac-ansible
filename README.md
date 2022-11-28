@@ -109,11 +109,9 @@ Also make sure you go through the following and update with your details:
 4. done a git add/commit and push to your repo
 5. Then lastly you can run `ansible-playbook --ask-vault-pass -i inventory main.yml`
 
-## default.config.yml
-
-
 
 
 ## TODO:
 
 * create task to configure keyboard shortcuts
+* make bootstrap and playbook configurable for repos folder
